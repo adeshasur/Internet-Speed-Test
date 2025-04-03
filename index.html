@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Internet Speed Test</title>
+</head>
+
+<body>
+    <div class="container">
+        <div class="speed-meter">
+            <div class="gauge-indicator">
+                <svg viewBox="0 0 120 120">
+                    <defs>
+                        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#4cc9f0" />
+                            <stop offset="100%" stop-color="#4361ee" />
+                        </linearGradient>
+                    </defs>
+                    <circle class="gauge-bg" cx="60" cy="60" r="50" />
+                    <circle class="gauge-progress" cx="60" cy="60" r="50" stroke-dasharray="314" stroke-dashoffset="314" />
+                </svg>
+            </div>
+            <div class="speed-meter-circle">
+                <div class="speed-value" id="speed-value">0</div>
+                <div class="speed-unit">Mbps</div>
+            </div>
+        </div>
+        
+        <p class="status" id="status">Ready to test your internet speed</p>
+        
+        <div class="progress-bar">
+            <div class="progress" id="progress"></div>
+        </div>
+        
+        <div class="result-container">
+            <div class="result-row">
+                <span class="result-label"><i class="fas fa-download"></i> Download</span>
+                <span class="result-value" id="download-speed">-</span>
+            </div>
+            <div class="result-row">
+                <span class="result-label"><i class="fas fa-signal"></i> Quality</span>
+                <span class="result-value" id="connection-quality">-</span>
+            </div>
+            <div class="result-row">
+                <span class="result-label"><i class="fas fa-file"></i> Test Size</span>
+                <span class="result-value" id="file-size">-</span>
+            </div>
+        </div>
+        
+        <button class="test-btn" id="start-test">
+            <i class="fas fa-tachometer-alt"></i> Start Speed Test
+        </button>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+
+</html>
