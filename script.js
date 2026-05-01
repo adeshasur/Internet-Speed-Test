@@ -11,29 +11,27 @@ const gaugeProgressEl = document.querySelector('.gauge-progress');
 // Gauge configuration
 const GAUGE_FULL_VALUE = 314; // Circumference of circle with r=50
 
-// Test configuration - using public CDN files
+// Test configuration - using public CDN files for testing
 const testFiles = [
     {
-        name: 'Small File (0.5MB)',
+        name: 'Initial Ping',
         url: 'https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js',
-        size: 0.5 // size in MB (approximate)
+        size: 0.1
     },
     {
-        name: 'Medium File (2MB)',
+        name: 'Stream Analysis',
         url: 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-        size: 2 // size in MB (approximate)
+        size: 1.5
     },
     {
-        name: 'Large File (5MB)',
+        name: 'Deep Buffer Test',
         url: 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/gsap.min.js',
-        size: 5 // size in MB (approximate)
+        size: 3.5
     }
 ];
 
 // Test variables
 let testInProgress = false;
-let downloadSpeed = 0;
-let liveSpeedInterval;
 
 // Update progress bar
 function updateProgress(percent) {
@@ -42,17 +40,35 @@ function updateProgress(percent) {
 
 // Update gauge chart
 function updateGauge(value) {
-    // Max value for gauge is 100 Mbps
+    // Max value for gauge is 100 Mbps for visual representation
     const maxSpeed = 100;
     const percentage = Math.min(value / maxSpeed, 1);
     const offset = GAUGE_FULL_VALUE * (1 - percentage);
     gaugeProgressEl.style.strokeDashoffset = offset;
     
-    // Update speed value
-    speedValueEl.textContent = value.toFixed(1);
+    // Animate numbers
+    animateNumber(speedValueEl, value, 1);
 }
 
-// Get connection quality based on speed
+function animateNumber(element, target, decimals = 1) {
+    const current = parseFloat(element.textContent) || 0;
+    const duration = 400; // ms
+    const startTime = performance.now();
+
+    function update(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const value = current + (target - current) * progress;
+        element.textContent = value.toFixed(decimals);
+
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        }
+    }
+    requestAnimationFrame(update);
+}
+
+// Get connection quality with premium badges
 function getConnectionQuality(speedMbps) {
     let quality, className;
     
@@ -70,15 +86,14 @@ function getConnectionQuality(speedMbps) {
         className = 'quality-excellent';
     }
     
-    return `<span class="quality-badge ${className}">${quality}</span>`;
+    return `<span class="quality-tag ${className}">${quality}</span>`;
 }
 
 // Format file size
-function formatFileSize(size) {
-    if (size < 1) {
-        return `${(size * 1024).toFixed(0)} KB`;
-    }
-    return `${size.toFixed(2)} MB`;
+function formatFileSize(sizeInBytes) {
+    if (sizeInBytes < 1024) return `${sizeInBytes} B`;
+    if (sizeInBytes < 1024 * 1024) return `${(sizeInBytes / 1024).toFixed(1)} KB`;
+    return `${(sizeInBytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 // Download test function
@@ -89,35 +104,28 @@ async function runDownloadTest(fileObj) {
         let lastLoaded = 0;
         
         try {
-            // Add cache busting to prevent browser caching
             const cacheBuster = `?cachebust=${new Date().getTime()}`;
-            
-            // Use XMLHttpRequest for progress monitoring
             const xhr = new XMLHttpRequest();
             xhr.open('GET', fileObj.url + cacheBuster, true);
             xhr.responseType = 'blob';
             
-            // Track progress
             xhr.onprogress = function(event) {
                 if (event.lengthComputable) {
                     const currentTime = performance.now();
-                    const timeElapsed = (currentTime - lastTimestamp) / 1000; // seconds
+                    const timeElapsed = (currentTime - lastTimestamp) / 1000;
                     
-                    if (timeElapsed > 0.2) { // Update every 200ms
-                        const loadedSinceLastUpdate = event.loaded - lastLoaded; // bytes
-                        const instantSpeed = (loadedSinceLastUpdate * 8) / timeElapsed / 1024 / 1024; // Mbps
+                    if (timeElapsed > 0.1) {
+                        const loadedSinceLastUpdate = event.loaded - lastLoaded;
+                        const instantSpeed = (loadedSinceLastUpdate * 8) / timeElapsed / 1024 / 1024;
                         
-                        // Update live speed indicator
                         updateGauge(instantSpeed);
                         
-                        // Update timestamps and loaded amount for next calculation
                         lastTimestamp = currentTime;
                         lastLoaded = event.loaded;
                     }
                     
-                    // Update progress percentage within this file download
                     const percentComplete = (event.loaded / event.total) * 100;
-                    updateProgress(percentComplete);
+                    // We don't update main progress here, but could
                 }
             };
             
@@ -125,45 +133,24 @@ async function runDownloadTest(fileObj) {
                 if (xhr.status === 200) {
                     const endTime = performance.now();
                     const durationInSeconds = (endTime - startTime) / 1000;
-                    
-                    // Get actual file size
-                    const blob = xhr.response;
-                    const actualSize = blob.size / (1024 * 1024); // Convert bytes to MB
-                    
-                    // Calculate speed in Mbps (megabits per second)
-                    const speedMbps = (actualSize * 8) / durationInSeconds;
+                    const actualSize = xhr.response.size;
+                    const speedMbps = (actualSize * 8) / durationInSeconds / 1024 / 1024;
                     
                     resolve({
                         success: true,
                         speedMbps,
-                        fileSize: actualSize
+                        bytes: actualSize
                     });
                 } else {
-                    resolve({
-                        success: false,
-                        speedMbps: 0,
-                        fileSize: 0
-                    });
+                    resolve({ success: false });
                 }
             };
             
-            xhr.onerror = function() {
-                resolve({
-                    success: false,
-                    speedMbps: 0,
-                    fileSize: 0
-                });
-            };
-            
+            xhr.onerror = () => resolve({ success: false });
             xhr.send();
             
         } catch (error) {
-            console.error('Download test error:', error);
-            resolve({
-                success: false,
-                speedMbps: 0,
-                fileSize: 0
-            });
+            resolve({ success: false });
         }
     });
 }
@@ -174,65 +161,58 @@ async function runSpeedTest() {
     
     testInProgress = true;
     startBtn.disabled = true;
+    startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
     
     // Reset UI
-    downloadSpeedEl.textContent = '-';
+    downloadSpeedEl.textContent = '0.00';
     connectionQualityEl.innerHTML = '-';
-    fileSizeEl.textContent = '-';
+    fileSizeEl.textContent = '0.0 KB';
     updateProgress(0);
     updateGauge(0);
     
-    // Add pulse animation to speed meter
     document.querySelector('.speed-meter-circle').classList.add('pulse');
     
     let totalSpeedMbps = 0;
     let successfulTests = 0;
-    let totalFileSize = 0;
+    let totalBytes = 0;
     
-    // Run tests for each file
     for (let i = 0; i < testFiles.length; i++) {
         const fileObj = testFiles[i];
-        statusEl.textContent = `Testing with ${fileObj.name}...`;
+        statusEl.textContent = `Optimizing: ${fileObj.name}`;
         
         const result = await runDownloadTest(fileObj);
         
         if (result.success) {
             totalSpeedMbps += result.speedMbps;
-            totalFileSize += result.fileSize;
+            totalBytes += result.bytes;
             successfulTests++;
+            
+            const overallProgress = ((i + 1) / testFiles.length) * 100;
+            updateProgress(overallProgress);
         }
         
-        // Short pause between tests
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(r => setTimeout(r, 400));
     }
     
-    // Calculate average speed
     if (successfulTests > 0) {
-        downloadSpeed = totalSpeedMbps / successfulTests;
+        const avgSpeed = totalSpeedMbps / successfulTests;
         
-        // Update UI with results
-        downloadSpeedEl.textContent = `${downloadSpeed.toFixed(2)} Mbps`;
-        connectionQualityEl.innerHTML = getConnectionQuality(downloadSpeed);
-        fileSizeEl.textContent = formatFileSize(totalFileSize);
+        downloadSpeedEl.textContent = avgSpeed.toFixed(2);
+        connectionQualityEl.innerHTML = getConnectionQuality(avgSpeed);
+        fileSizeEl.textContent = formatFileSize(totalBytes);
         
-        // Final gauge update
-        updateGauge(downloadSpeed);
-        
-        statusEl.innerHTML = 'Speed test completed! <br><small style="color: var(--accent-color)">Experience the full speed of Premium Edition</small>';
+        updateGauge(avgSpeed);
+        statusEl.innerHTML = 'Analysis Complete <br><small style="color: var(--primary)">Connection optimized for Premium experience</small>';
     } else {
-        statusEl.textContent = 'Test failed. Please check your connection.';
+        statusEl.textContent = 'Optimization failed. Check your network.';
     }
     
-    // Remove pulse animation
     document.querySelector('.speed-meter-circle').classList.remove('pulse');
-    
     updateProgress(100);
     testInProgress = false;
     startBtn.disabled = false;
+    startBtn.innerHTML = '<i class="fas fa-redo"></i> Restart Analytics';
 }
 
-// Event listener for start button
 startBtn.addEventListener('click', runSpeedTest);
-
-// Initialize gauge at 0
 updateGauge(0);
