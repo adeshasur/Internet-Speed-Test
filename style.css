@@ -109,12 +109,27 @@ body {
     transition: stroke-dashoffset 0.8s cubic-bezier(0.2, 0, 0.2, 1);
 }
 
+.speed-meter-circle {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 140px;
+    height: 140px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2);
+}
+
 .speed-value {
     font-family: 'Outfit', sans-serif;
-    font-size: 3.5rem;
+    font-size: 3rem;
     font-weight: 800;
     line-height: 1;
     color: #fff;
+    margin-top: 5px;
 }
 
 .speed-unit {
