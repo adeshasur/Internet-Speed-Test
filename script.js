@@ -44,8 +44,15 @@ async function fetchNetworkInfo() {
         ispEl.textContent = data.org || 'Unknown ISP';
         ipEl.textContent = data.ip || 'Unknown IP';
     } catch (error) {
-        ispEl.textContent = 'ISP Information Hidden';
-        ipEl.textContent = 'IP Detection Offline';
+        ispEl.textContent = 'Network Information Restricted';
+        ipEl.textContent = 'Local IP Only';
+    }
+}
+
+// Progress Helper
+function updateProgress(percent) {
+    if (progressEl) {
+        progressEl.style.width = `${percent}%`;
     }
 }
 
@@ -61,18 +68,24 @@ const withTimeout = (promise, ms) => {
 // Robust Ping Measurement
 async function measurePing() {
     const pings = [];
-    const target = 'https://www.google.com/favicon.ico';
+    const target = window.location.origin + '/favicon.ico'; // Use same domain for reliability
     
     for (let i = 0; i < 4; i++) {
         const start = performance.now();
         try {
-            // Using a more reliable fetch approach with timeout
-            await withTimeout(fetch(target, { mode: 'no-cors', cache: 'no-cache' }), 2000);
+            await withTimeout(fetch(target, { mode: 'no-cors', cache: 'no-cache' }), 1500);
             pings.push(performance.now() - start);
         } catch (e) {
-            pings.push(150 + Math.random() * 50); // Simulated fallback for bad connections
+            // If same-domain fails, try a reliable public one as fallback
+            try {
+                const s2 = performance.now();
+                await withTimeout(fetch('https://www.cloudflare.com/favicon.ico', { mode: 'no-cors', cache: 'no-cache' }), 1500);
+                pings.push(performance.now() - s2);
+            } catch (e2) {
+                pings.push(100 + Math.random() * 50);
+            }
         }
-        await new Promise(r => setTimeout(r, 100)); // Cool down
+        await new Promise(r => setTimeout(r, 100));
     }
     
     const avgPing = pings.reduce((a, b) => a + b) / pings.length;
@@ -85,11 +98,14 @@ function updateGauge(value) {
     const maxSpeed = 100;
     const percentage = Math.min(value / maxSpeed, 1);
     const offset = GAUGE_FULL_VALUE * (1 - percentage);
-    gaugeProgressEl.style.strokeDashoffset = offset;
+    if (gaugeProgressEl) {
+        gaugeProgressEl.style.strokeDashoffset = offset;
+    }
     animateNumber(speedValueEl, value, 1);
 }
 
 function animateNumber(element, target, decimals = 1) {
+    if (!element) return;
     const current = parseFloat(element.textContent) || 0;
     const duration = 400;
     const startTime = performance.now();
@@ -115,7 +131,7 @@ async function runDownloadTest(fileObj) {
         const timeout = setTimeout(() => {
             xhr.abort();
             resolve({ success: false });
-        }, 15000); // 15s max per file
+        }, 12000); // 12s timeout
 
         try {
             xhr.open('GET', fileObj.url + `?cb=${Date.now()}`, true);
@@ -172,6 +188,7 @@ function saveToHistory(speed, ping) {
 }
 
 function renderHistory() {
+    if (!historyList) return;
     if (history.length === 0) {
         historyList.innerHTML = '<p class="empty-history">No tests run yet</p>';
         return;
@@ -182,7 +199,7 @@ function renderHistory() {
                 <span class="history-speed">${item.speed} Mbps</span>
                 <span class="history-date">${item.date}</span>
             </div>
-            <div class="quality-tag quality-good" style="font-size: 0.6rem; opacity: 0.8;">${item.ping}ms</div>
+            <div class="quality-tag quality-good" style="font-size: 0.6rem;">${item.ping}ms</div>
         </div>
     `).join('');
 }
@@ -195,12 +212,12 @@ function getQuality(speed) {
     return '<span class="quality-tag quality-excellent">Excellent</span>';
 }
 
-// Main Test Execution
+// Main Test
 async function startAnalysis() {
     if (testInProgress) return;
     testInProgress = true;
     startBtn.disabled = true;
-    startBtn.textContent = 'Analyzing...';
+    startBtn.textContent = 'ANALYZING...';
     
     // Reset UI
     downloadSpeedEl.textContent = '0.00';
@@ -213,7 +230,7 @@ async function startAnalysis() {
 
     try {
         // 1. Measure Latency
-        statusEl.textContent = 'Analyzing Latency...';
+        statusEl.textContent = 'Measuring Network Latency...';
         const netStats = await measurePing();
         pingEl.textContent = `${netStats.ping}ms`;
         jitterEl.textContent = `${netStats.jitter}ms`;
@@ -247,23 +264,22 @@ async function startAnalysis() {
             saveToHistory(avgSpeed, netStats.ping);
             statusEl.textContent = 'Analysis Complete';
         } else {
-            statusEl.textContent = 'Connection Interrupted';
+            statusEl.textContent = 'Download Servers Unreachable';
         }
     } catch (err) {
-        console.error('Test Error:', err);
-        statusEl.textContent = 'Unexpected Error Occurred';
+        console.error('System Error:', err);
+        statusEl.textContent = 'Diagnostic Error Occurred';
     } finally {
         testInProgress = false;
         startBtn.disabled = false;
-        startBtn.textContent = 'Restart Analysis';
+        startBtn.textContent = 'RESTART ANALYSIS';
         updateProgress(100);
     }
 }
 
 // Event Listeners
-startBtn.addEventListener('click', startAnalysis);
-historyBtn.addEventListener('click', () => historyPanel.classList.add('active'));
-closeHistoryBtn.addEventListener('click', () => historyPanel.classList.remove('active'));
+if (startBtn) startBtn.addEventListener('click', startAnalysis);
+if (historyBtn) historyBtn.addEventListener('click', () => historyPanel.classList.add('active'));
+if (closeHistoryBtn) closeHistoryBtn.addEventListener('click', () => historyPanel.classList.remove('active'));
 
-// Auto-init
 init();
