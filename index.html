@@ -10,38 +10,26 @@
 </head>
 
 <body>
-    <div class="bg-blobs">
-        <div class="blob blob-1"></div>
-        <div class="blob blob-2"></div>
-        <div class="blob blob-3"></div>
-    </div>
-
     <div class="container">
         <div class="premium-tag">
-            <i class="fas fa-crown"></i>
-            PREMIUM EDITION
+            <i class="fas fa-shield-alt"></i>
+            PREMIUM ANALYTICS
         </div>
 
         <div class="speed-meter">
             <div class="gauge-indicator">
                 <svg viewBox="0 0 120 120">
-                    <defs>
-                        <linearGradient id="premium-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stop-color="#6366f1" />
-                            <stop offset="100%" stop-color="#a855f7" />
-                        </linearGradient>
-                    </defs>
                     <circle class="gauge-bg" cx="60" cy="60" r="50" />
                     <circle class="gauge-progress" cx="60" cy="60" r="50" stroke-dasharray="314" stroke-dashoffset="314" />
                 </svg>
             </div>
             <div class="speed-meter-circle">
                 <div class="speed-value" id="speed-value">0</div>
-                <div class="speed-unit">MBPS</div>
+                <div class="speed-unit">Mbps</div>
             </div>
         </div>
         
-        <div class="status" id="status">Ready to analyze your connection</div>
+        <p class="status" id="status">Ready to analyze network performance</p>
         
         <div class="progress-container">
             <div class="progress-bar" id="progress"></div>
@@ -49,21 +37,21 @@
         
         <div class="result-grid">
             <div class="result-card">
-                <span class="result-label"><i class="fas fa-arrow-down"></i> Download</span>
+                <span class="result-label">Download</span>
                 <span class="result-value" id="download-speed">0.00</span>
             </div>
             <div class="result-card">
-                <span class="result-label"><i class="fas fa-bolt"></i> Quality</span>
+                <span class="result-label">Quality</span>
                 <span class="result-value" id="connection-quality">-</span>
             </div>
             <div class="result-card full-width">
-                <span class="result-label"><i class="fas fa-database"></i> Data Processed</span>
+                <span class="result-label">Processed Volume</span>
                 <span class="result-value" id="file-size">0.0 KB</span>
             </div>
         </div>
         
         <button class="test-btn" id="start-test">
-            <i class="fas fa-play"></i> Run Analytics
+            Start Analysis
         </button>
     </div>
     

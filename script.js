@@ -161,7 +161,7 @@ async function runSpeedTest() {
     
     testInProgress = true;
     startBtn.disabled = true;
-    startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+    startBtn.textContent = 'Analyzing...';
     
     // Reset UI
     downloadSpeedEl.textContent = '0.00';
@@ -170,15 +170,13 @@ async function runSpeedTest() {
     updateProgress(0);
     updateGauge(0);
     
-    document.querySelector('.speed-meter-circle').classList.add('pulse');
-    
     let totalSpeedMbps = 0;
     let successfulTests = 0;
     let totalBytes = 0;
     
     for (let i = 0; i < testFiles.length; i++) {
         const fileObj = testFiles[i];
-        statusEl.textContent = `Optimizing: ${fileObj.name}`;
+        statusEl.textContent = `Running: ${fileObj.name}`;
         
         const result = await runDownloadTest(fileObj);
         
@@ -202,16 +200,15 @@ async function runSpeedTest() {
         fileSizeEl.textContent = formatFileSize(totalBytes);
         
         updateGauge(avgSpeed);
-        statusEl.innerHTML = 'Analysis Complete <br><small style="color: var(--primary)">Connection optimized for Premium experience</small>';
+        statusEl.innerHTML = 'Analysis Complete';
     } else {
-        statusEl.textContent = 'Optimization failed. Check your network.';
+        statusEl.textContent = 'Connection failed';
     }
     
-    document.querySelector('.speed-meter-circle').classList.remove('pulse');
     updateProgress(100);
     testInProgress = false;
     startBtn.disabled = false;
-    startBtn.innerHTML = '<i class="fas fa-redo"></i> Restart Analytics';
+    startBtn.textContent = 'Restart Analysis';
 }
 
 startBtn.addEventListener('click', runSpeedTest);
