@@ -218,7 +218,7 @@ async function runSpeedTest() {
         // Final gauge update
         updateGauge(downloadSpeed);
         
-        statusEl.textContent = 'Speed test completed!';
+        statusEl.innerHTML = 'Speed test completed! <br><small style="color: var(--accent-color)">Experience the full speed of Premium Edition</small>';
     } else {
         statusEl.textContent = 'Test failed. Please check your connection.';
     }
