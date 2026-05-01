@@ -2,7 +2,9 @@
 
 A high-performance, professional-grade network diagnostic suite designed for precision and speed. This application provides a comprehensive analysis of internet connectivity through advanced measurement algorithms and real-time data visualization.
 
-![Application Preview](Capture.PNG)
+<p align="center">
+  <img src="Capture.PNG" alt="Application Preview">
+</p>
 
 ## Overview
 
