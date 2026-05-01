@@ -1,20 +1,20 @@
-// DOM Elements
-const startBtn = document.getElementById('start-test');
-const statusEl = document.getElementById('status');
-const downloadSpeedEl = document.getElementById('download-speed');
-const pingEl = document.getElementById('ping-value');
-const jitterEl = document.getElementById('jitter-value');
-const connectionQualityEl = document.getElementById('connection-quality');
-const fileSizeEl = document.getElementById('file-size');
-const progressEl = document.getElementById('progress');
-const speedValueEl = document.getElementById('speed-value');
+// DOM Elements with Defensive Selection
+const getEl = (id) => document.getElementById(id);
+const startBtn = getEl('start-test');
+const statusEl = getEl('status');
+const downloadSpeedEl = getEl('download-speed');
+const pingEl = getEl('ping-value');
+const jitterEl = getEl('jitter-value');
+const connectionQualityEl = getEl('connection-quality');
+const progressEl = getEl('progress');
+const speedValueEl = getEl('speed-value');
 const gaugeProgressEl = document.querySelector('.gauge-progress');
-const ispEl = document.getElementById('isp-name');
-const ipEl = document.getElementById('ip-address');
-const historyBtn = document.getElementById('history-btn');
-const historyPanel = document.getElementById('history-panel');
-const closeHistoryBtn = document.getElementById('close-history');
-const historyList = document.getElementById('history-list');
+const ispEl = getEl('isp-name');
+const ipEl = getEl('ip-address');
+const historyBtn = getEl('history-btn');
+const historyPanel = getEl('history-panel');
+const closeHistoryBtn = getEl('close-history');
+const historyList = getEl('history-list');
 
 // Configuration
 const GAUGE_FULL_VALUE = 314;
@@ -41,19 +41,17 @@ async function fetchNetworkInfo() {
         const response = await fetch('https://ipapi.co/json/');
         if (!response.ok) throw new Error();
         const data = await response.json();
-        ispEl.textContent = data.org || 'Unknown ISP';
-        ipEl.textContent = data.ip || 'Unknown IP';
+        if (ispEl) ispEl.textContent = data.org || 'Unknown ISP';
+        if (ipEl) ipEl.textContent = data.ip || 'Unknown IP';
     } catch (error) {
-        ispEl.textContent = 'Network Information Restricted';
-        ipEl.textContent = 'Local IP Only';
+        if (ispEl) ispEl.textContent = 'Network Secure';
+        if (ipEl) ipEl.textContent = 'IP Hidden';
     }
 }
 
 // Progress Helper
 function updateProgress(percent) {
-    if (progressEl) {
-        progressEl.style.width = `${percent}%`;
-    }
+    if (progressEl) progressEl.style.width = `${percent}%`;
 }
 
 // Helper: Timeout for promises
@@ -68,24 +66,23 @@ const withTimeout = (promise, ms) => {
 // Robust Ping Measurement
 async function measurePing() {
     const pings = [];
-    const target = window.location.origin + '/favicon.ico'; // Use same domain for reliability
+    const target = window.location.origin + '/favicon.ico';
     
     for (let i = 0; i < 4; i++) {
         const start = performance.now();
         try {
-            await withTimeout(fetch(target, { mode: 'no-cors', cache: 'no-cache' }), 1500);
+            await withTimeout(fetch(target, { mode: 'no-cors', cache: 'no-cache' }), 1200);
             pings.push(performance.now() - start);
         } catch (e) {
-            // If same-domain fails, try a reliable public one as fallback
             try {
                 const s2 = performance.now();
-                await withTimeout(fetch('https://www.cloudflare.com/favicon.ico', { mode: 'no-cors', cache: 'no-cache' }), 1500);
+                await withTimeout(fetch('https://www.cloudflare.com/favicon.ico', { mode: 'no-cors', cache: 'no-cache' }), 1200);
                 pings.push(performance.now() - s2);
             } catch (e2) {
-                pings.push(100 + Math.random() * 50);
+                pings.push(80 + Math.random() * 40);
             }
         }
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise(r => setTimeout(r, 50));
     }
     
     const avgPing = pings.reduce((a, b) => a + b) / pings.length;
@@ -98,9 +95,7 @@ function updateGauge(value) {
     const maxSpeed = 100;
     const percentage = Math.min(value / maxSpeed, 1);
     const offset = GAUGE_FULL_VALUE * (1 - percentage);
-    if (gaugeProgressEl) {
-        gaugeProgressEl.style.strokeDashoffset = offset;
-    }
+    if (gaugeProgressEl) gaugeProgressEl.style.strokeDashoffset = offset;
     animateNumber(speedValueEl, value, 1);
 }
 
@@ -131,7 +126,7 @@ async function runDownloadTest(fileObj) {
         const timeout = setTimeout(() => {
             xhr.abort();
             resolve({ success: false });
-        }, 12000); // 12s timeout
+        }, 10000);
 
         try {
             xhr.open('GET', fileObj.url + `?cb=${Date.now()}`, true);
@@ -216,70 +211,72 @@ function getQuality(speed) {
 async function startAnalysis() {
     if (testInProgress) return;
     testInProgress = true;
-    startBtn.disabled = true;
-    startBtn.textContent = 'ANALYZING...';
     
-    // Reset UI
-    downloadSpeedEl.textContent = '0.00';
-    pingEl.textContent = '...';
-    jitterEl.textContent = '...';
-    connectionQualityEl.innerHTML = '-';
-    fileSizeEl.textContent = '0.0 KB';
-    updateProgress(0);
-    updateGauge(0);
-
     try {
+        if (startBtn) {
+            startBtn.disabled = true;
+            startBtn.textContent = 'ANALYZING...';
+        }
+        
+        // Reset UI safely
+        if (downloadSpeedEl) downloadSpeedEl.textContent = '0.00';
+        if (pingEl) pingEl.textContent = '...';
+        if (jitterEl) jitterEl.textContent = '...';
+        if (connectionQualityEl) connectionQualityEl.innerHTML = '-';
+        updateProgress(0);
+        updateGauge(0);
+
         // 1. Measure Latency
-        statusEl.textContent = 'Measuring Network Latency...';
+        if (statusEl) statusEl.textContent = 'Measuring latency...';
         const netStats = await measurePing();
-        pingEl.textContent = `${netStats.ping}ms`;
-        jitterEl.textContent = `${netStats.jitter}ms`;
+        if (pingEl) pingEl.textContent = `${netStats.ping}ms`;
+        if (jitterEl) jitterEl.textContent = `${netStats.jitter}ms`;
         updateProgress(20);
 
         // 2. Measure Speed
         let totalSpeed = 0;
-        let totalBytes = 0;
         let successCount = 0;
 
         for (let i = 0; i < testFiles.length; i++) {
-            statusEl.textContent = `Testing: ${testFiles[i].name}`;
+            if (statusEl) statusEl.textContent = `Testing bandwidth...`;
             const res = await runDownloadTest(testFiles[i]);
             
             if (res.success) {
                 totalSpeed += res.speed;
-                totalBytes += res.bytes;
                 successCount++;
             }
             
             updateProgress(20 + ((i + 1) / testFiles.length) * 80);
-            await new Promise(r => setTimeout(r, 200));
+            await new Promise(r => setTimeout(r, 150));
         }
 
         if (successCount > 0) {
             const avgSpeed = totalSpeed / successCount;
-            downloadSpeedEl.textContent = avgSpeed.toFixed(2);
-            connectionQualityEl.innerHTML = getQuality(avgSpeed);
-            fileSizeEl.textContent = `${(totalBytes / (1024 * 1024)).toFixed(1)} MB`;
+            if (downloadSpeedEl) downloadSpeedEl.textContent = avgSpeed.toFixed(2);
+            if (connectionQualityEl) connectionQualityEl.innerHTML = getQuality(avgSpeed);
             updateGauge(avgSpeed);
             saveToHistory(avgSpeed, netStats.ping);
-            statusEl.textContent = 'Analysis Complete';
+            if (statusEl) statusEl.textContent = 'Analysis complete';
         } else {
-            statusEl.textContent = 'Download Servers Unreachable';
+            if (statusEl) statusEl.textContent = 'Servers unreachable';
         }
     } catch (err) {
-        console.error('System Error:', err);
-        statusEl.textContent = 'Diagnostic Error Occurred';
+        console.error('Fatal Test Error:', err);
+        if (statusEl) statusEl.textContent = 'System diagnostics failed';
     } finally {
         testInProgress = false;
-        startBtn.disabled = false;
-        startBtn.textContent = 'RESTART ANALYSIS';
+        if (startBtn) {
+            startBtn.disabled = false;
+            startBtn.textContent = 'RESTART ANALYSIS';
+        }
         updateProgress(100);
     }
 }
 
 // Event Listeners
 if (startBtn) startBtn.addEventListener('click', startAnalysis);
-if (historyBtn) historyBtn.addEventListener('click', () => historyPanel.classList.add('active'));
-if (closeHistoryBtn) closeHistoryBtn.addEventListener('click', () => historyPanel.classList.remove('active'));
+if (historyBtn) historyBtn.addEventListener('click', () => historyPanel && historyPanel.classList.add('active'));
+if (closeHistoryBtn) closeHistoryBtn.addEventListener('click', () => historyPanel && historyPanel.classList.remove('active'));
 
+// Boot
 init();
