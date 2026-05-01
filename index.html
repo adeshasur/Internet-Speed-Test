@@ -11,9 +11,14 @@
 
 <body>
     <div class="container">
-        <div class="premium-tag">
-            <i class="fas fa-shield-alt"></i>
-            PREMIUM ANALYTICS
+        <div class="header">
+            <div class="premium-tag">
+                <i class="fas fa-shield-alt"></i>
+                PREMIUM ANALYTICS PRO
+            </div>
+            <button id="history-btn" class="icon-btn" title="View History">
+                <i class="fas fa-history"></i>
+            </button>
         </div>
 
         <div class="speed-meter">
@@ -41,18 +46,44 @@
                 <span class="result-value" id="download-speed">0.00</span>
             </div>
             <div class="result-card">
+                <span class="result-label">Ping</span>
+                <span class="result-value" id="ping-value">-</span>
+            </div>
+            <div class="result-card">
+                <span class="result-label">Jitter</span>
+                <span class="result-value" id="jitter-value">-</span>
+            </div>
+            <div class="result-card">
                 <span class="result-label">Quality</span>
                 <span class="result-value" id="connection-quality">-</span>
             </div>
-            <div class="result-card full-width">
-                <span class="result-label">Processed Volume</span>
-                <span class="result-value" id="file-size">0.0 KB</span>
+        </div>
+
+        <div class="network-info" id="network-info">
+            <div class="info-item">
+                <i class="fas fa-network-wired"></i>
+                <span id="isp-name">Detecting ISP...</span>
+            </div>
+            <div class="info-item">
+                <i class="fas fa-globe"></i>
+                <span id="ip-address">Loading IP...</span>
             </div>
         </div>
         
         <button class="test-btn" id="start-test">
             Start Analysis
         </button>
+
+        <div id="history-panel" class="history-panel">
+            <div class="history-header">
+                <h3>Recent Tests</h3>
+                <button id="close-history" class="icon-btn"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="history-list" class="history-list">
+                <!-- History items will be injected here -->
+                <p class="empty-history">No tests run yet</p>
+            </div>
+        </div>
     </div>
     
     <script src="script.js"></script>
