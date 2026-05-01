@@ -29,11 +29,15 @@
                 </svg>
             </div>
             <div class="speed-meter-circle">
-                <div class="speed-value" id="speed-value">0</div>
+                <div class="speed-value" id="speed-value">0.0</div>
                 <div class="speed-unit">Mbps</div>
             </div>
         </div>
         
+        <div class="graph-container">
+            <canvas id="sparkline"></canvas>
+        </div>
+
         <p class="status" id="status">Ready to analyze network performance</p>
         
         <div class="progress-container">
@@ -46,16 +50,16 @@
                 <span class="result-value" id="download-speed">0.00</span>
             </div>
             <div class="result-card">
+                <span class="result-label">Upload</span>
+                <span class="result-value" id="upload-speed">0.00</span>
+            </div>
+            <div class="result-card">
                 <span class="result-label">Ping</span>
                 <span class="result-value" id="ping-value">-</span>
             </div>
             <div class="result-card">
                 <span class="result-label">Jitter</span>
                 <span class="result-value" id="jitter-value">-</span>
-            </div>
-            <div class="result-card">
-                <span class="result-label">Quality</span>
-                <span class="result-value" id="connection-quality">-</span>
             </div>
         </div>
 
@@ -65,8 +69,8 @@
                 <span id="isp-name">Detecting ISP...</span>
             </div>
             <div class="info-item">
-                <i class="fas fa-globe"></i>
-                <span id="ip-address">Loading IP...</span>
+                <i class="fas fa-bolt"></i>
+                <span id="connection-type">Estimating Signal...</span>
             </div>
         </div>
         
@@ -80,7 +84,6 @@
                 <button id="close-history" class="icon-btn"><i class="fas fa-times"></i></button>
             </div>
             <div id="history-list" class="history-list">
-                <!-- History items will be injected here -->
                 <p class="empty-history">No tests run yet</p>
             </div>
         </div>
