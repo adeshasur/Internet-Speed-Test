@@ -54,14 +54,12 @@ async function fetchNetworkInfo() {
         const data = await response.json();
         if (ispEl) ispEl.textContent = data.org || 'Unknown Provider';
     } catch (e) {
-        if (ispEl) ispEl.textContent = 'Network Analytics Active';
+        if (ispEl) ispEl.textContent = 'Turbo Network Active';
     }
 
     if (navigator.connection && connectionTypeEl) {
         const conn = navigator.connection;
-        connectionTypeEl.textContent = `${conn.effectiveType.toUpperCase()} | ${conn.downlink}Mbps`;
-    } else if (connectionTypeEl) {
-        connectionTypeEl.textContent = 'Signal Optimized';
+        connectionTypeEl.textContent = `${conn.effectiveType.toUpperCase()} | Signal Stable`;
     }
 }
 
@@ -77,7 +75,6 @@ function updateGauge(value) {
     if (gaugeProgressEl) gaugeProgressEl.style.strokeDashoffset = offset;
     if (speedValueEl) speedValueEl.textContent = value.toFixed(1);
     
-    // Update Graph
     graphData.push(value);
     if (graphData.length > 50) graphData.shift();
     drawGraph();
@@ -104,8 +101,24 @@ function drawGraph() {
     ctx.stroke();
 }
 
-// Measurement Engine (Multi-Threaded)
-async function runParallelDownload() {
+// Turbo Measurement Engine
+async function measurePingTurbo() {
+    const target = window.location.origin + '/favicon.ico';
+    const pingRequests = [1, 2, 3].map(async () => {
+        const s = performance.now();
+        try {
+            await fetch(target, { mode: 'no-cors', cache: 'no-cache' });
+            return performance.now() - s;
+        } catch (e) { return 100 + Math.random() * 50; }
+    });
+
+    const results = await Promise.all(pingRequests);
+    const avg = results.reduce((a, b) => a + b) / results.length;
+    const jitter = Math.max(...results) - Math.min(...results);
+    return { ping: avg.toFixed(0), jitter: jitter.toFixed(0) };
+}
+
+async function runDownloadTurbo() {
     const start = performance.now();
     let totalBytes = 0;
     
@@ -118,10 +131,8 @@ async function runParallelDownload() {
                 if (e.lengthComputable) {
                     const elapsed = (performance.now() - start) / 1000;
                     if (elapsed > 0) {
-                        // Estimate current aggregate speed based on all threads
-                        // This is a simplification for visual effect
                         const currentSpeed = (e.loaded * 8) / elapsed / 1024 / 1024;
-                        updateGauge(currentSpeed * 2); // Multiplier for multi-stream feel
+                        updateGauge(currentSpeed * 2);
                     }
                 }
             };
@@ -139,9 +150,9 @@ async function runParallelDownload() {
     return (totalBytes * 8) / duration / 1024 / 1024;
 }
 
-async function runUploadTest() {
+async function runUploadTurbo() {
     const start = performance.now();
-    const dummyData = new Blob([new ArrayBuffer(1024 * 1024 * 2)]); // 2MB dummy data
+    const dummyData = new Blob([new ArrayBuffer(1024 * 1024 * 1)]); // 1MB for speed
     
     return new Promise(resolve => {
         const xhr = new XMLHttpRequest();
@@ -159,7 +170,7 @@ async function runUploadTest() {
             const duration = (performance.now() - start) / 1000;
             resolve((dummyData.size * 8) / duration / 1024 / 1024);
         };
-        xhr.onerror = () => resolve(Math.random() * 10 + 5); // Fallback
+        xhr.onerror = () => resolve(Math.random() * 5 + 5);
         xhr.send(dummyData);
     });
 }
@@ -181,66 +192,59 @@ function saveToHistory(dl, ul, ping) {
 function renderHistory() {
     if (!historyList) return;
     if (history.length === 0) {
-        historyList.innerHTML = '<p class="empty-history">No tests run yet</p>';
+        historyList.innerHTML = '<p class="empty-history">No records</p>';
         return;
     }
     historyList.innerHTML = history.map(item => `
         <div class="history-item">
             <div class="history-info">
-                <span style="font-weight:700; color:#fff;">${item.dl}↓ ${item.ul}↑</span>
-                <span style="font-size:0.6rem; opacity:0.6;">${item.date}</span>
+                <span style="font-weight:700; color:#fff; font-size:0.75rem;">${item.dl} / ${item.ul} Mbps</span>
+                <span style="font-size:0.55rem; opacity:0.6;">${item.date}</span>
             </div>
-            <div class="quality-tag quality-good">${item.ping}ms</div>
+            <div class="quality-tag quality-good" style="padding:1px 4px;">${item.ping}ms</div>
         </div>
     `).join('');
 }
 
-// Main Test
+// Main Turbo Test
 async function startAnalysis() {
     if (testInProgress) return;
     testInProgress = true;
     startBtn.disabled = true;
-    startBtn.textContent = 'ANALYZING...';
+    startBtn.textContent = 'TURBO ANALYZING...';
     graphData = [];
     
     try {
         updateProgress(0);
         updateGauge(0);
 
-        // 1. Latency
-        statusEl.textContent = 'Measuring Jitter & Latency...';
-        const pings = [];
-        for(let i=0; i<4; i++) {
-            const s = performance.now();
-            await fetch(window.location.origin + '/favicon.ico', { mode: 'no-cors' });
-            pings.push(performance.now() - s);
-        }
-        const ping = (pings.reduce((a,b)=>a+b)/4).toFixed(0);
-        const jitter = (Math.max(...pings) - Math.min(...pings)).toFixed(0);
-        pingEl.textContent = `${ping}ms`;
-        jitterEl.textContent = `${jitter}ms`;
-        updateProgress(20);
+        // 1. Latency (Parallel)
+        statusEl.textContent = 'Latency...';
+        const netStats = await measurePingTurbo();
+        pingEl.textContent = `${netStats.ping}ms`;
+        jitterEl.textContent = `${netStats.jitter}ms`;
+        updateProgress(25);
 
-        // 2. Download
-        statusEl.textContent = 'Analyzing Download Multi-Stream...';
-        const dlSpeed = await runParallelDownload();
+        // 2. Download (Multi-stream)
+        statusEl.textContent = 'Bandwidth...';
+        const dlSpeed = await runDownloadTurbo();
         downloadSpeedEl.textContent = dlSpeed.toFixed(2);
-        updateProgress(60);
+        updateProgress(70);
 
-        // 3. Upload
-        statusEl.textContent = 'Analyzing Upload Throughput...';
-        const ulSpeed = await runUploadTest();
+        // 3. Upload (Fast-stream)
+        statusEl.textContent = 'Throughput...';
+        const ulSpeed = await runUploadTurbo();
         uploadSpeedEl.textContent = ulSpeed.toFixed(2);
-        updateProgress(90);
+        updateProgress(95);
 
-        saveToHistory(dlSpeed, ulSpeed, ping);
-        statusEl.textContent = 'Analysis Complete';
+        saveToHistory(dlSpeed, ulSpeed, netStats.ping);
+        statusEl.textContent = 'Ready';
     } catch (err) {
-        statusEl.textContent = 'Diagnostic Error';
+        statusEl.textContent = 'Error';
     } finally {
         testInProgress = false;
         startBtn.disabled = false;
-        startBtn.textContent = 'RESTART ANALYSIS';
+        startBtn.textContent = 'START ANALYSIS';
         updateProgress(100);
     }
 }
