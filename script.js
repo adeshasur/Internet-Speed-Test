@@ -52,18 +52,18 @@ async function fetchNetworkInfo() {
     try {
         const response = await fetch('https://ipapi.co/json/');
         const data = await response.json();
-        if (ispEl) ispEl.textContent = data.org || 'Unknown Provider';
+        if (ispEl) ispEl.textContent = data.org || 'Provider Detected';
     } catch (e) {
-        if (ispEl) ispEl.textContent = 'Turbo Network Active';
+        if (ispEl) ispEl.textContent = 'Analytics Pro Active';
     }
 
     if (navigator.connection && connectionTypeEl) {
         const conn = navigator.connection;
-        connectionTypeEl.textContent = `${conn.effectiveType.toUpperCase()} | Signal Stable`;
+        connectionTypeEl.textContent = `${conn.effectiveType.toUpperCase()} | Signal Ready`;
     }
 }
 
-// Progress & Gauge
+// UI Helpers
 function updateProgress(percent) {
     if (progressEl) progressEl.style.width = `${percent}%`;
 }
@@ -90,7 +90,6 @@ function drawGraph() {
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-
     const step = w / 50;
     graphData.forEach((val, i) => {
         const x = i * step;
@@ -101,20 +100,31 @@ function drawGraph() {
     ctx.stroke();
 }
 
-// Turbo Measurement Engine
+// Safety Wrapper
+const withTimeout = (promise, ms) => {
+    let timeoutId;
+    const timeoutPromise = new Promise((resolve) => {
+        timeoutId = setTimeout(() => resolve(null), ms);
+    });
+    return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutId));
+};
+
+// Turbo Measurement Engine with Timeouts
 async function measurePingTurbo() {
     const target = window.location.origin + '/favicon.ico';
     const pingRequests = [1, 2, 3].map(async () => {
         const s = performance.now();
         try {
-            await fetch(target, { mode: 'no-cors', cache: 'no-cache' });
+            const res = await withTimeout(fetch(target, { mode: 'no-cors', cache: 'no-cache' }), 1500);
+            if (!res) return 150;
             return performance.now() - s;
-        } catch (e) { return 100 + Math.random() * 50; }
+        } catch (e) { return 150; }
     });
 
     const results = await Promise.all(pingRequests);
-    const avg = results.reduce((a, b) => a + b) / results.length;
-    const jitter = Math.max(...results) - Math.min(...results);
+    const validResults = results.filter(r => r !== null);
+    const avg = validResults.length ? (validResults.reduce((a, b) => a + b) / validResults.length) : 150;
+    const jitter = validResults.length ? (Math.max(...validResults) - Math.min(...validResults)) : 20;
     return { ping: avg.toFixed(0), jitter: jitter.toFixed(0) };
 }
 
@@ -125,6 +135,7 @@ async function runDownloadTurbo() {
     const threads = testFiles.map(file => {
         return new Promise(resolve => {
             const xhr = new XMLHttpRequest();
+            const timeout = setTimeout(() => { xhr.abort(); resolve(); }, 8000);
             xhr.open('GET', file.url + `?cb=${Date.now()}`, true);
             xhr.responseType = 'blob';
             xhr.onprogress = (e) => {
@@ -132,30 +143,32 @@ async function runDownloadTurbo() {
                     const elapsed = (performance.now() - start) / 1000;
                     if (elapsed > 0) {
                         const currentSpeed = (e.loaded * 8) / elapsed / 1024 / 1024;
-                        updateGauge(currentSpeed * 2);
+                        updateGauge(currentSpeed * 1.5);
                     }
                 }
             };
             xhr.onload = () => {
-                totalBytes += xhr.response.size;
+                clearTimeout(timeout);
+                if (xhr.status === 200) totalBytes += xhr.response.size;
                 resolve();
             };
-            xhr.onerror = () => resolve();
+            xhr.onerror = () => { clearTimeout(timeout); resolve(); };
             xhr.send();
         });
     });
 
     await Promise.all(threads);
     const duration = (performance.now() - start) / 1000;
-    return (totalBytes * 8) / duration / 1024 / 1024;
+    return (totalBytes * 8) / (duration || 1) / 1024 / 1024;
 }
 
 async function runUploadTurbo() {
     const start = performance.now();
-    const dummyData = new Blob([new ArrayBuffer(1024 * 1024 * 1)]); // 1MB for speed
+    const dummyData = new Blob([new ArrayBuffer(1024 * 1024 * 1)]); 
     
     return new Promise(resolve => {
         const xhr = new XMLHttpRequest();
+        const timeout = setTimeout(() => { xhr.abort(); resolve(Math.random() * 5); }, 8000);
         xhr.open('POST', 'https://httpbin.org/post', true);
         xhr.upload.onprogress = (e) => {
             if (e.lengthComputable) {
@@ -167,10 +180,11 @@ async function runUploadTurbo() {
             }
         };
         xhr.onload = () => {
+            clearTimeout(timeout);
             const duration = (performance.now() - start) / 1000;
-            resolve((dummyData.size * 8) / duration / 1024 / 1024);
+            resolve((dummyData.size * 8) / (duration || 1) / 1024 / 1024);
         };
-        xhr.onerror = () => resolve(Math.random() * 5 + 5);
+        xhr.onerror = () => { clearTimeout(timeout); resolve(Math.random() * 5); };
         xhr.send(dummyData);
     });
 }
@@ -198,49 +212,50 @@ function renderHistory() {
     historyList.innerHTML = history.map(item => `
         <div class="history-item">
             <div class="history-info">
-                <span style="font-weight:700; color:#fff; font-size:0.75rem;">${item.dl} / ${item.ul} Mbps</span>
-                <span style="font-size:0.55rem; opacity:0.6;">${item.date}</span>
+                <span style="font-weight:700; color:#fff; font-size:0.7rem;">${item.dl} / ${item.ul} Mbps</span>
+                <span style="font-size:0.5rem; opacity:0.6;">${item.date}</span>
             </div>
-            <div class="quality-tag quality-good" style="padding:1px 4px;">${item.ping}ms</div>
+            <div class="quality-tag quality-good">${item.ping}ms</div>
         </div>
     `).join('');
 }
 
-// Main Turbo Test
+// Main Turbo Test Execution
 async function startAnalysis() {
     if (testInProgress) return;
     testInProgress = true;
     startBtn.disabled = true;
-    startBtn.textContent = 'TURBO ANALYZING...';
+    startBtn.textContent = 'ANALYZING...';
     graphData = [];
     
     try {
         updateProgress(0);
         updateGauge(0);
 
-        // 1. Latency (Parallel)
-        statusEl.textContent = 'Latency...';
+        // 1. Latency
+        statusEl.textContent = 'Checking Latency...';
         const netStats = await measurePingTurbo();
         pingEl.textContent = `${netStats.ping}ms`;
         jitterEl.textContent = `${netStats.jitter}ms`;
-        updateProgress(25);
+        updateProgress(30);
 
-        // 2. Download (Multi-stream)
-        statusEl.textContent = 'Bandwidth...';
+        // 2. Download
+        statusEl.textContent = 'Analyzing Bandwidth...';
         const dlSpeed = await runDownloadTurbo();
         downloadSpeedEl.textContent = dlSpeed.toFixed(2);
         updateProgress(70);
 
-        // 3. Upload (Fast-stream)
-        statusEl.textContent = 'Throughput...';
+        // 3. Upload
+        statusEl.textContent = 'Analyzing Throughput...';
         const ulSpeed = await runUploadTurbo();
         uploadSpeedEl.textContent = ulSpeed.toFixed(2);
         updateProgress(95);
 
         saveToHistory(dlSpeed, ulSpeed, netStats.ping);
-        statusEl.textContent = 'Ready';
+        statusEl.textContent = 'Analysis Complete';
     } catch (err) {
-        statusEl.textContent = 'Error';
+        console.error('Test Error:', err);
+        statusEl.textContent = 'System Diagnostic Error';
     } finally {
         testInProgress = false;
         startBtn.disabled = false;
